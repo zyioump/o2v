@@ -84,3 +84,4 @@ class Menu():
 
         self.camera.stop()
         self.motor.changeStatus("(2)")
+        self.fan.changeStatus("(2)")

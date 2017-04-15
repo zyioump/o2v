@@ -18,7 +18,6 @@ class Fan():
 
     def changeStatus(self, status):
         self.running = status
-        print(self.running)
         if self.running == "(1)":
             GPIO.output(self.pinFan, GPIO.HIGH)
         else:

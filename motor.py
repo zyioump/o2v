@@ -37,6 +37,7 @@ class Motor():
             if self.direction == "(1)":
                 GPIO.output(self.pinMotor1Invert, GPIO.LOW)
                 GPIO.output(self.pinMotor2Invert, GPIO.LOW)
+                time.sleep(0.5)
                 GPIO.output(self.pinMotor1, GPIO.HIGH)
                 GPIO.output(self.pinMotor2, GPIO.HIGH)
             elif self.direction == "(2)":
@@ -48,11 +49,13 @@ class Motor():
             elif self.direction == "(4)":
                 GPIO.output(self.pinMotor1, GPIO.LOW)
                 GPIO.output(self.pinMotor2Invert, GPIO.LOW)
+                time.sleep(0.5)
                 GPIO.output(self.pinMotor2, GPIO.HIGH)
                 GPIO.output(self.pinMotor1Invert, GPIO.HIGH)
             elif self.direction == "(3)":
                 GPIO.output(self.pinMotor2, GPIO.LOW)
                 GPIO.output(self.pinMotor1Invert, GPIO.LOW)
+                time.sleep(0.5)
                 GPIO.output(self.pinMotor1, GPIO.HIGH)
                 GPIO.output(self.pinMotor2Invert, GPIO.HIGH)
         else:
