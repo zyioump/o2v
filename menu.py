@@ -82,6 +82,9 @@ class Menu():
             elif self.tag != "":
                 self.d.msgbox("Votre action a été désactivé dans la congiguration")
 
-        self.camera.stop()
-        self.motor.changeStatus("(2)")
-        self.fan.changeStatus("(2)")
+        if config["CAMERA"]["cameraEnabled"] == "True":
+            self.camera.stop()
+        if config["MOTOR"]["motorEnabled"] == "True":
+            self.motor.changeStatus("(2)")
+        if config["FAN"]["fanEnabled"] == "True":
+            self.fan.changeStatus("(2)")
