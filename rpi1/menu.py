@@ -13,6 +13,9 @@ if config["FAN"]["fanEnabled"] == "True":
 if config["CAMERA"]["cameraEnabled"] == "True":
     from camera import Camera
 
+if config["VOLANT"]["volantEnabled"] == "True":
+    from volant import Volant
+
 class Menu():
     def __init__(self):
         self.d = Dialog(dialog="dialog")
@@ -29,6 +32,10 @@ class Menu():
         if config["CAMERA"]["cameraEnabled"] == "True":
             self.camera = Camera(config)
             self.camera.start()
+
+        if config["VOLANT"]["volantEnabled"] == "True":
+            self.volant = Volant(config, self.motor)
+            self.volant.start()
 
 
     def go(self):
@@ -88,3 +95,5 @@ class Menu():
             self.motor.changeStatus("(2)")
         if config["FAN"]["fanEnabled"] == "True":
             self.fan.changeStatus("(2)")
+        if config["VOLANT"]["volantEnabled"] == "True":
+            self.volant.stop()

@@ -1,6 +1,8 @@
+#! /usr/bin/env python3
 import pygame
 from pygame.locals import *
 import time
+import socket
 
 pygame.init()
 
@@ -8,9 +10,6 @@ xMax = 800
 yMax = 480
 
 window = pygame.display.set_mode((xMax, yMax))
-
-js = pygame.joystick.Joystick(0)
-js.init()
 
 back = pygame.image.load("back.jpg")
 back = pygame.transform.scale(back, (xMax, yMax))
@@ -21,7 +20,7 @@ volant = pygame.transform.scale(volant, (100, 100))
 running = True
 
 class Menu():
-    def __init__(self, back, volant, window, joystick, xMax, yMax):
+    def __init__(self, back, volant, window, joystick, xMax, yMax, sock):
         self.delay = 50
         self.timeBetweenImg = 500
         self.totalStep = int(self.timeBetweenImg/self.delay)
@@ -34,7 +33,7 @@ class Menu():
         self.xMax = xMax
         self.yMax = yMax
         self.running = True
-        self.currentMenu = "Principale"
+        self.currentMenu = "Principal"
         self.currentSelection = 0
         self.mainMenu = ["Caméra", "Ventilateur", "Lampe"]
         self.cameraMenu = ["Allumer", "Eteindre", "Nombre d'image", "Voir les images"]
@@ -54,7 +53,9 @@ class Menu():
         self.nextButton = 7
         self.quitButton = 8
         self.pedale = 0
-
+        self.sock = sock
+        self.lastMotorState = "off"
+        self.lastDirectionState = "font"
 
     def rot_center(self, image, angle):
         """rotate an image while keeping its center and size"""
@@ -82,7 +83,7 @@ class Menu():
 
 
 
-            if self.currentMenu == "Principale":
+            if self.currentMenu == "Principal":
                 for i in range(len(self.mainMenu)):
                     if self.currentSelection == i:
                         self.window.blit(self.secondaryFont.render("  > "+self.mainMenu[i], 1, (0,0,0)), (self.xMax/2-self.boxSize[0]/2, y))
@@ -128,7 +129,7 @@ class Menu():
                     img = pygame.transform.scale(img, (self.imageBoxSize[0]-20, self.imageBoxSize[1]-20))
                     self.window.blit(img, (self.xMax/2-self.imageBoxSize[0]/2+10,self.yMax/2-self.imageBoxSize[1]/2+10))
                 except:
-                    self.currentMenu = "Principale"
+                    self.currentMenu = "Principal"
                     self.currentSelection = 0
                 self.currentStep += 1
 
@@ -142,7 +143,7 @@ class Menu():
                         self.running = False
                     elif event.button == self.downButton:
                         self.currentSelection += 1
-                        if self.currentMenu == "Principale":
+                        if self.currentMenu == "Principal":
                             if self.currentSelection >= len(self.mainMenu):
                                 self.currentSelection = 0
                         if self.currentMenu == "Caméra":
@@ -160,7 +161,7 @@ class Menu():
                     elif event.button == self.upButton:
                         self.currentSelection -= 1
                         if self.currentSelection < 0:
-                            if self.currentMenu == "Principale":
+                            if self.currentMenu == "Principal":
                                 self.currentSelection = len(self.mainMenu)-1
                             if self.currentMenu == "Caméra":
                                 self.currentSelection = len(self.cameraMenu)-1
@@ -172,7 +173,7 @@ class Menu():
                                 self.currentSelection = len(self.imageMenu)-1
 
                     elif event.button == self.nextButton:
-                        if self.currentMenu == "Principale":
+                        if self.currentMenu == "Principal":
                             self.currentMenu = self.mainMenu[self.currentSelection]
                             self.currentSelection = 0
                         elif self.currentMenu == "Caméra":
@@ -186,15 +187,56 @@ class Menu():
                             self.currentImg = 0
 
                     elif event.button == self.backButton:
-                        self.currentMenu = "Principale"
+                        self.currentMenu = "Principal"
                         self.currentSelection = 0
                 elif event.type == JOYAXISMOTION:
                     if event.axis == 0:
                          self.volantBis = self.rot_center(self.volant, -event.value*90)
+                         if event.value >= 1:
+                             if self.lastMotorState != "right":
+                                self.sock.send("direction:right".encode('utf-8'))
+                                self.lastMotorState = "right"
+                         elif event.value <= -1:
+                             if self.lastMotorState != "left":
+                                self.sock.send("direction:left".encode('utf-8'))
+                                self.lastMotorState = "left"
+                         else:
+                             if self.lastMotorState != "front":
+                                self.sock.send("direction:front".encode('utf-8'))
+                                self.lastMotorState = "front"
+
                     elif event.axis == 3:
                         self.pedale = event.value
+                        if event.value <= -1:
+                            if self.lastMotorState != "on":
+                                self.sock.send("motor:on".encode('utf-8'))
+                                self.lastMotorState = "on"
+                                self.sock.send("direction:front".encode('utf-8'))
+                                self.lastDirectionState = "front"
+                        elif event.value >= 1:
+                            if self.lastDirectionState != "back":
+                                self.sock.send("direction:back".encode('utf-8'))
+                                self.lastDirectionState = "back"
+                                if self.lastMotorState != "on":
+                                    time.sleep(0.1)
+                                    self.sock.send("motor:on".encode('utf-8'))
+                                    self.lastMotorState = "on"
+                        else:
+                            if self.lastMotorState != "off":
+                                self.sock.send("motor:off".encode('utf-8'))
+                                self.lastMotorState = "off"
 
             time.sleep(self.delay/1000)
 
-menu = Menu(back, volant, window, js, xMax, yMax)
+js = pygame.joystick.Joystick(0)
+js.init()
+sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+sock.connect(("169.254.232.39", 1906))
+menu = Menu(back, volant, window, js, xMax, yMax, sock)
 menu.run()
+print("Impossible de se connecter à la voiture")
+print("Vérifier que vous êtes bien connecté à la voiture")
+print("Êtes vous sur d'avoir lancé le serveur ?")
+print("Est-il bien réglé sur le port "+port+" ?")
+print("N'y a t'il pas de firewall activé ?")
+print("Impossible d'utiliser la manette")
