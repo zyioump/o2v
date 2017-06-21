@@ -1,6 +1,7 @@
 from threading import Thread
 import socket
 import time
+import json
 
 class Volant(Thread):
     def __init__(self, config, motor):
@@ -11,33 +12,32 @@ class Volant(Thread):
         self.sock.bind(("",int(self.config["VOLANT"]["serverPort"])))
         self.running = True
         self.connectionRunning = False
-        print(self.config["VOLANT"]["serverPort"])
+        self.json = {}
 
     def run(self):
         while self.running:
             self.sock.listen(1)
-            volant, addr = self.sock.accept()
+            self.volant, addr = self.sock.accept()
             self.connectionRunning = True
             while self.connectionRunning:
-                msg = volant.recv(255).decode("utf-8")
+                msg = self.volant.recv(255).decode("utf-8")
+
                 if not msg:
                     self.connectionRunning = False
-                elif msg == "motor:on":
-                    self.motor.changeStatus("(1)")
-                elif msg == "motor:off":
-                    self.motor.changeStatus("(2)")
-                elif msg == "direction:front":
-                    self.motor.changeDirection("(1)")
-                elif msg == "direction:back":
-                    self.motor.changeDirection("(2)")
-                elif msg == "direction:right":
-                    self.motor.changeDirection("(3)")
-                elif msg == "direction:left":
-                    self.motor.changeDirection("(4)")
+                    return 0
 
-                time.sleep(0.250)
+                try:
+                    self.json = json.loads(msg)
+                except:
+                    pass
+
+                self.motor.changeStatus(self.json["motor"])
+                self.motor.changeDirection(self.json["direction"])
+
+                time.sleep(50/1000)
 
 
     def stop(self):
         self.connectionRunning = False
         self.running = False
+        self.sock.close()

@@ -3,6 +3,11 @@ import pygame
 from pygame.locals import *
 import time
 import socket
+import json
+import configparser
+
+config = configparser.ConfigParser()
+config.read("config.ini")
 
 pygame.init()
 
@@ -54,8 +59,11 @@ class Menu():
         self.quitButton = 8
         self.pedale = 0
         self.sock = sock
-        self.lastMotorState = "off"
-        self.lastDirectionState = "font"
+        self.motorState = "(2)"
+        self.directionState = "(1)"
+        self.jsonCall = {}
+        self.jsonCall["motor"] = self.motorState
+        self.jsonCall["direction"] = self.directionState
 
     def rot_center(self, image, angle):
         """rotate an image while keeping its center and size"""
@@ -192,51 +200,59 @@ class Menu():
                 elif event.type == JOYAXISMOTION:
                     if event.axis == 0:
                          self.volantBis = self.rot_center(self.volant, -event.value*90)
-                         if event.value >= 1:
-                             if self.lastMotorState != "right":
-                                self.sock.send("direction:right".encode('utf-8'))
-                                self.lastMotorState = "right"
-                         elif event.value <= -1:
-                             if self.lastMotorState != "left":
-                                self.sock.send("direction:left".encode('utf-8'))
-                                self.lastMotorState = "left"
+                         if event.value >= 0.5:
+                             if self.directionState != "(3)":
+                                self.directionState = "(3)"
+                         elif event.value <= -0.5:
+                             if self.directionState != "(4)":
+                                self.directionState = "(4)"
                          else:
-                             if self.lastMotorState != "front":
-                                self.sock.send("direction:front".encode('utf-8'))
-                                self.lastMotorState = "front"
+                             if self.directionState != "(1)":
+                                self.directionState = "(1)"
 
                     elif event.axis == 3:
                         self.pedale = event.value
-                        if event.value <= -1:
-                            if self.lastMotorState != "on":
-                                self.sock.send("motor:on".encode('utf-8'))
-                                self.lastMotorState = "on"
-                                self.sock.send("direction:front".encode('utf-8'))
-                                self.lastDirectionState = "front"
-                        elif event.value >= 1:
-                            if self.lastDirectionState != "back":
-                                self.sock.send("direction:back".encode('utf-8'))
-                                self.lastDirectionState = "back"
-                                if self.lastMotorState != "on":
-                                    time.sleep(0.1)
-                                    self.sock.send("motor:on".encode('utf-8'))
-                                    self.lastMotorState = "on"
+                        if event.value <= -0.5:
+                            if self.motorState != "(1)":
+                                self.motorState = "(1)"
+                                self.directionState = "(1)"
+                        elif event.value >= 0.5:
+                            if self.directionState != "(2)":
+                                self.directionState = "(2)"
+                                if self.motorState != "(1)":
+                                    self.motorState = "(1)"
                         else:
-                            if self.lastMotorState != "off":
-                                self.sock.send("motor:off".encode('utf-8'))
-                                self.lastMotorState = "off"
+                            if self.motorState != "(2)":
+                                self.motorState = "(2)"
+            if self.jsonCall["motor"] != self.motorState or self.jsonCall["direction"] != self.directionState:
+                self.jsonCall["motor"] = self.motorState
+                self.jsonCall["direction"] = self.directionState
+                self.sock.send(json.dumps(self.jsonCall).encode("utf-8"))
 
             time.sleep(self.delay/1000)
 
-js = pygame.joystick.Joystick(0)
-js.init()
-sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-sock.connect(("169.254.232.39", 1906))
-menu = Menu(back, volant, window, js, xMax, yMax, sock)
-menu.run()
-print("Impossible de se connecter à la voiture")
-print("Vérifier que vous êtes bien connecté à la voiture")
-print("Êtes vous sur d'avoir lancé le serveur ?")
-print("Est-il bien réglé sur le port "+port+" ?")
-print("N'y a t'il pas de firewall activé ?")
-print("Impossible d'utiliser la manette")
+ok = True
+
+try:
+    js = pygame.joystick.Joystick(int(config["JOYSTICK"]["joystickNumber"]))
+    js.init()
+except:
+    print("Impossible de trouver la manette")
+    print("Vérifiez le branchement de la manette")
+    print("Vérifiez le numéro de joystick dans la config (0 de base)\n")
+    ok = False
+
+try:
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((config["SERVER"]["carAddr"], int(config["SERVER"]["port"])))
+except:
+    print("Impossible de se connecter à la voiture")
+    print("Vérifiez que vous êtes connecté au wifi de la voiture")
+    print("Vérifiez que le serveur de la voiture est allumé")
+    print("Vérifiez si le port et l'adresse indiqué dans la config sont bonnes")
+    print("Vérifiez que vous n'avez pas activé un firewall sur votre voiture\n")
+    ok = False
+
+if ok == True:
+    menu = Menu(back, volant, window, js, xMax, yMax, sock)
+    menu.run()
