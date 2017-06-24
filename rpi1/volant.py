@@ -4,10 +4,11 @@ import time
 import json
 
 class Volant(Thread):
-    def __init__(self, config, motor):
+    def __init__(self, config, motor, fan):
         Thread.__init__(self)
         self.config = config
         self.motor = motor
+        self.fan = fan
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.sock.bind(("",int(self.config["VOLANT"]["serverPort"])))
         self.running = True
@@ -33,6 +34,7 @@ class Volant(Thread):
 
                 self.motor.changeStatus(self.json["motor"])
                 self.motor.changeDirection(self.json["direction"])
+                self.fan.changeStatus(self.json["ventilo"])
 
                 time.sleep(50/1000)
 

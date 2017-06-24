@@ -61,9 +61,11 @@ class Menu():
         self.sock = sock
         self.motorState = "(2)"
         self.directionState = "(1)"
+        self.ventiloState = "(2)"
         self.jsonCall = {}
-        self.jsonCall["motor"] = self.motorState
+        self.jsonCall["ventilo"] = self.ventiloState
         self.jsonCall["direction"] = self.directionState
+        self.jsonCall["motor"] = self.motorState
 
     def rot_center(self, image, angle):
         """rotate an image while keeping its center and size"""
@@ -193,6 +195,12 @@ class Menu():
                             self.currentSelection = 0
                             self.currentStep = self.totalStep
                             self.currentImg = 0
+                        elif self.currentMenu == "Ventilateur":
+                            self.currentMenu = "Principal"
+                            if self.ventilateurMenu[self.currentSelection] == "Allumer":
+                                self.ventiloState = "(1)"
+                            else:
+                                self.ventiloState = "(2)"
 
                     elif event.button == self.backButton:
                         self.currentMenu = "Principal"
@@ -224,9 +232,10 @@ class Menu():
                         else:
                             if self.motorState != "(2)":
                                 self.motorState = "(2)"
-            if self.jsonCall["motor"] != self.motorState or self.jsonCall["direction"] != self.directionState:
+            if self.jsonCall != {"motor":self.motorState, "direction":self.directionState, "ventilo":self.ventiloState}:
                 self.jsonCall["motor"] = self.motorState
                 self.jsonCall["direction"] = self.directionState
+                self.jsonCall["ventilo"] = self.ventiloState
                 self.sock.send(json.dumps(self.jsonCall).encode("utf-8"))
 
             time.sleep(self.delay/1000)

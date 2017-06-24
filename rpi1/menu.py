@@ -34,7 +34,7 @@ class Menu():
             self.camera.start()
 
         if config["VOLANT"]["volantEnabled"] == "True":
-            self.volant = Volant(config, self.motor)
+            self.volant = Volant(config, self.motor, self.fan)
             self.volant.start()
 
 
